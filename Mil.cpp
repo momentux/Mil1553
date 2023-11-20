@@ -9,6 +9,7 @@
 #include "McxAPIReturnCodes.h"
 #include "icd.h"
 
+
 #pragma comment(lib, "ws2_32.lib") // Link with ws2_32.lib
 #pragma comment(lib, "McxAPI")
 
@@ -99,7 +100,8 @@ int main() {
                 isFirstLine = false;
             }
             else {
-                ProcessReceivedData(dataString);
+                std::cout << "Processing data: " << dataString << std::endl;
+//                ProcessReceivedData(dataString);
             }
         }
         else {
@@ -184,8 +186,6 @@ INT16 CreateBusFrame() {
 }
 
 void ProcessReceivedData(const std::string dataString) {
-    std::cout << "Processing data: " << dataString << std::endl;
-
     ICD_6_1_data data;
     std::istringstream lineStream(dataString);
     std::string cell;
