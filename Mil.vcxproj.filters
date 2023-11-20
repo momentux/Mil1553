@@ -18,5 +18,13 @@
     <ClCompile Include="Mil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="icd.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="icd.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
