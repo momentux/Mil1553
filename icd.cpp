@@ -67,17 +67,17 @@ void prepare(ICD_6_1_data data, UINT16 buffer[32])
     buffer[31] = static_cast<UINT16>(data.yawrate * lsb9);
 };
 
-void doubleToUint16Buffer(ICD_6_2_data data,UINT16 buffer[32])
+void prepare(ICD_6_2_data data,UINT16 buffer[32])
 {
     std::fill_n(buffer, 32, 0);
 
-    buffer[24] = static_cast<UINT16>(data.inustatus);
-    buffer[25] = static_cast<UINT16>(data.loop);
-    buffer[26] = data.imumodeword;
-    buffer[27] = static_cast<UINT16>(data.srufailureindicators);
+    buffer[0] = data.inustatus;
+    buffer[1] = data.loop;
+    buffer[2] = data.imumodeword;
+    buffer[3] = data.srufailureindicators;
 };
 
-void doubleToUint16Buffer(ICD_6_3_data data, UINT16 buffer[32])
+void prepare(ICD_6_3_data data, UINT16 buffer[32])
 {
     std::fill_n(buffer, 32, 0);
 
@@ -92,7 +92,7 @@ void doubleToUint16Buffer(ICD_6_3_data data, UINT16 buffer[32])
     buffer[36] = static_cast<UINT16>(data.verticalpositionfom);
 };
 
-void doubleToUint16Buffer(ICD_6_4_data data, UINT16 buffer[32])
+void prepare(ICD_6_4_data data, UINT16 buffer[32])
 {
     std::fill_n(buffer, 32, 0);
 

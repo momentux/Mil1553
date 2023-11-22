@@ -26,11 +26,14 @@
     <ClInclude Include="icd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Mil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
+<ItemGroup>
     <ResourceCompile Include="Mil.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>

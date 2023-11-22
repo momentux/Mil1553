@@ -107,10 +107,12 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+<AdditionalIncludeDirectories>C:\Momentux\Mil\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+<AdditionalLibraryDirectories>C:\Momentux\Mil\Lib\32</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -135,6 +137,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="icd.h" />
+    <ClInclude Include="Mil.h" />
+    <ClInclude Include="resource.h" />
+    </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Mil.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

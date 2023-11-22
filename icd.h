@@ -31,10 +31,10 @@ struct ICD_6_1_data
 
 struct ICD_6_2_data
 {
-    double inustatus = 0.0;
-    double loop = 0.0;
+    UINT16 inustatus = 0;
+    UINT16 loop = (1 << 8) - 1;
     UINT16 imumodeword = 0;
-    double srufailureindicators = 0.0;
+    UINT16 srufailureindicators = (4 << 0) | (4 << 5) | (4 << 10);
 };
 struct ICD_6_3_data
 {
