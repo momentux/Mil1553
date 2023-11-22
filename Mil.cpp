@@ -1,15 +1,16 @@
+#include "stdafx.h"
+#include "Windows.h"
 #include <iostream>
 #include <sstream>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <string>
 #include <algorithm>
 #include "McxAPI.h"
 #include "McxAPIReturnCodes.h"
 #include "icd.h"
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#pragma comment(lib, "ws2_32.lib") // Link with ws2_32.lib
+#pragma comment(lib, "Ws2_32.lib") // Link with ws2_32.lib
 #pragma comment(lib, "McxAPI")
 
 // Function declarations
@@ -268,7 +269,7 @@ INT16 CreateBusFrame()
 
     if (std::getline(lineStream, cell))
     {
-        data.presentpositionlongitudeword = std::stod(cell);
+        data.pplon = std::stod(cell);
     }
 
     if (std::getline(lineStream, cell))
@@ -278,22 +279,22 @@ INT16 CreateBusFrame()
 
     if (std::getline(lineStream, cell))
     {
-        data.presentpositionlatitudeword = std::stod(cell);
+        data.pplat = std::stod(cell);
     }
 
     if (std::getline(lineStream, cell))
     {
-        data.rollrateword = std::stod(cell);
+        data.rollrate = std::stod(cell);
     }
 
     if (std::getline(lineStream, cell))
     {
-        data.pitchrateword = std::stod(cell);
+        data.pitchrate = std::stod(cell);
     }
 
     if (std::getline(lineStream, cell))
     {
-        data.yawrateword = std::stod(cell);
+        data.yawrate = std::stod(cell);
     }
 
     INT16 iResult = 0;
@@ -342,8 +343,8 @@ INT16 SendMessage_6_1(ICD_6_1_data data)
 {
     INT16 results = 0;
     UINT16 buffer[32];
-    std::cout << "Sending data: " << data.value1 << std::endl;
-    doubleToUint16Buffer(data.value1, buffer);
+    std::cout << "Sending data: " << data.velocitytimetag << std::endl;
+    prepare(data, buffer);
     results = mcx_Element_DataBlock_Write(DeviceId, ICD_6_1, DB1, buffer, 32);
     return results;
 }
