@@ -26,7 +26,7 @@ struct ICD_6_1_data
     UINT16 imumodeword2 = 0;
     double rollrateword;  // fdm/jsbsim/velocities/phidot-rad_sec
     double pitchrateword; // fdm/jsbsim/velocities/thetadot-rad_sec
-    double yawrateword;   // fdm/jsbsim/velocities/thetadot-rad_sec
+    double yawrateword;   // fdm/jsbsim/velocities/psidot-rad_sec
 };
 
 struct ICD_6_2_data
