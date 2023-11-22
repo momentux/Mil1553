@@ -26,9 +26,6 @@
     <ClInclude Include="icd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Mil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
