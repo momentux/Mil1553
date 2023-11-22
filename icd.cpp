@@ -45,17 +45,22 @@ void prepare(ICD_6_1_data data, UINT16 buffer[32])
     buffer[15] = static_cast<UINT16>(data.verticalacceleration * lsb4);
 
     buffer[16] = static_cast<UINT16>(data.cnexx * lsb5);
-    buffer[17] = static_cast<UINT32>(data.cnexx * lsb5);
-    buffer[18] = static_cast<UINT32>(data.cnexy * lsb5);
-    buffer[19] = static_cast<UINT32>(data.cnexy * lsb5);
-    buffer[20] = static_cast<UINT32>(data.cneyz * lsb5);
-    buffer[21] = static_cast<UINT32>(data.cneyz * lsb5);
-    buffer[22] = static_cast<UINT32>(data.pplon * lsb8);
-    buffer[23] = static_cast<UINT32>(data.pplon * lsb8);
+    buffer[17] = static_cast<UINT16>(data.cnexx * lsb5);
+    buffer[18] = static_cast<UINT16>(data.cnexy * lsb5);
+    buffer[19] = static_cast<UINT16>(data.cnexy * lsb5);
+    buffer[20] = static_cast<UINT16>(data.cneyz * lsb5);
+    buffer[21] = static_cast<UINT16>(data.cneyz * lsb5);
+
+    temp = static_cast<UINT32>(data.pplon * lsb8);
+    buffer[22] = (temp >> 16) & 0xFFFF;
+    buffer[23] = temp & 0xFFFF;
+
     buffer[24] = static_cast<UINT16>(data.presentalt * lsb6);
     buffer[25] = static_cast<UINT16>(data.gcstreeringerror * lsb7);
-    buffer[26] = static_cast<UINT32>(data.pplat * lsb8);
-    buffer[27] = static_cast<UINT32>(data.pplat * lsb8);
+
+    temp = static_cast<UINT32>(data.pplat * lsb8);
+    buffer[26] = (temp >> 16) & 0xFFFF;
+    buffer[27] = temp & 0xFFFF;
     buffer[28] = data.imumodeword2;
     buffer[29] = static_cast<UINT16>(data.rollrate * lsb9);
     buffer[30] = static_cast<UINT16>(data.pitchrate * lsb9);
@@ -68,7 +73,7 @@ void doubleToUint16Buffer(ICD_6_2_data data,UINT16 buffer[32])
 
     buffer[24] = static_cast<UINT16>(data.inustatus);
     buffer[25] = static_cast<UINT16>(data.loop);
-    buffer[26] = static_cast<UINT16>(data.inumodeword);
+    buffer[26] = data.imumodeword;
     buffer[27] = static_cast<UINT16>(data.srufailureindicators);
 };
 
@@ -76,8 +81,8 @@ void doubleToUint16Buffer(ICD_6_3_data data, UINT16 buffer[32])
 {
     std::fill_n(buffer, 32, 0);
 
-    buffer[28] = static_cast<UINT32>(data.pplat * scaleFactor7);
-    buffer[29] = static_cast<UINT32>(data.pplon * scaleFactor7);
+    buffer[28] = static_cast<UINT32>(data.pplat * lsb8);
+    buffer[29] = static_cast<UINT32>(data.pplon * lsb8);
     buffer[30] = static_cast<UINT16>(data.magneticheading * lsb3);
     buffer[31] = static_cast<UINT16>(data.aligntimeandstatus);
     buffer[32] = static_cast<UINT16>(data.winddirection * lsb7);
@@ -104,9 +109,3 @@ void doubleToUint16Buffer(ICD_6_4_data data, UINT16 buffer[32])
     buffer[46] = static_cast<UINT16>(data.gpsfom);
     buffer[47] = static_cast<UINT16>(data.utctimetag);
 };
-
-void split_32bit_into_16bit(uint32_t num, uint16_t &higher, uint16_t &lower)
-{
-    higher = num >> 16;   // Extract the higher 16 bits
-    lower = num & 0xFFFF; // Extract the lower 16 bits
-}
