@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string>
 
+#include "Mil.h"
 #include "McxAPI.h"
 #include "McxAPIReturnCodes.h"
 #include "icd.h"
@@ -14,18 +15,15 @@
 #pragma comment(lib, "ws2_32.lib")  // Link with ws2_32.lib
 #pragma comment(lib, "McxAPI")
 
-// Function declarations
-INT16 InitDevice();
-INT16 CreateBusFrame();
-INT16 GetMessagesResults();
-void ProcessReceivedData(const std::string dataString);
-INT16 SendMessage_6_1(ICD_6_1_data data);
-
 static UINT16 ICD_6_1 = 0;
 static UINT16 ICD_6_2 = 1;
-static UINT16 ICD_6_4 = 2;
+static UINT16 ICD_6_3 = 2;
+static UINT16 ICD_6_4 = 3;
 static UINT16 DB1 = 0;
 static UINT16 DB2 = 1;
+static UINT16 DB3 = 2;
+static UINT16 DB4 = 3;
+
 UINT16 DeviceId = 0;
 char errorCode[1000];
 static UINT16 BusList1 = 0;
@@ -135,11 +133,12 @@ INT16 CreateBusFrame() {
 
     static UINT16 datablock32[64];
 
-    UINT16 messageOptions = 0;
+    UINT16 messageOptions = RT2RT_FORMAT;
     UINT16 cmd1 = 0x3020;  // BC2RT6 32WC
-    // UINT16 cmd2 = 0xA420; // RT202BC 32WC;
-    UINT16 cmd3_0 = 0xF020;  // RT11toRT30 32WC
-    UINT16 cmd3_1 = 0x5C20;  // RT11toRT30 32WC
+    UINT16 cmd2 = 0xA420; // RT202BC 32WC;
+    UINT16 cmd3 = 0xF020;  // RT11toRT30 32WC
+    UINT16 cmd4 = 0x5C20;  // RT11toRT30 32WC
+
     unsigned short rxStt = 0x800;
     unsigned short txStt = 0;
 
@@ -159,29 +158,46 @@ INT16 CreateBusFrame() {
     iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_1, cmd1, 0x80 /*Bus A*/ | messageOptions, 0x0000, rxStt, txStt);
     if (iResult < 0)
         return iResult;
-    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_2, cmd1, 0 /*Bus B*/ | messageOptions, 0x0000, rxStt, txStt);
+    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_2, cmd2, 0x80 /*Bus A*/ | messageOptions, 0x0000, rxStt, txStt);
     if (iResult < 0)
         return iResult;
-    messageOptions = RT2RT_FORMAT;
-    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_4, cmd3_0, 0x80 /*Bus B*/ | messageOptions, cmd3_1, rxStt, txStt);
+    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_3, cmd3, 0x80 /*Bus A*/ | messageOptions, 0x0000, rxStt, txStt);
+    if (iResult < 0)
+        return iResult;
+    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_4, cmd4, 0x80 /*Bus A*/ | messageOptions, 0x0000, rxStt, txStt);
     if (iResult < 0)
         return iResult;
     iResult = mcx_Create_Element_DataBlock(DeviceId, DB1, 0, datablock32, 64);
     if (iResult < 0)
         return iResult;
+    iResult = mcx_Create_Element_DataBlock(DeviceId, DB2, 0, datablock32, 64);
+    if (iResult < 0)
+        return iResult;
+    iResult = mcx_Create_Element_DataBlock(DeviceId, DB3, 0, datablock32, 64);
+    if (iResult < 0)
+        return iResult;
+    iResult = mcx_Create_Element_DataBlock(DeviceId, DB4, 0, datablock32, 64);
+    if (iResult < 0)
+        return iResult;
     iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_1, DB1);
     if (iResult < 0)
         return iResult;
-    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_2, DB1);
+    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_2, DB2);
     if (iResult < 0)
         return iResult;
-    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_4, DB1);
+    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_3, DB3);
+    if (iResult < 0)
+        return iResult;
+    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_4, DB4);
     if (iResult < 0)
         return iResult;
     iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_1);
     if (iResult < 0)
         return iResult;
     iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_2);
+    if (iResult < 0)
+        return iResult;
+    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_3);
     if (iResult < 0)
         return iResult;
     iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_4);
@@ -206,28 +222,28 @@ void Process(const std::string dataString) {
     ParseFGMessage(dataString, data1, data2, data3, data4);
 
     INT16 iResult = 0;
-    iResult = SendMessage_6_1(data);
+    iResult = SendMessage_6_1(data1);
     if (iResult < 0) {
         mcx_GetReturnCodeDescription(iResult, errorCode);
         printf("Error -> %s\n", errorCode);
         return;
     }
 
-    iResult = SendMessage_6_2(data);
+    iResult = SendMessage_6_2(data2);
     if (iResult < 0) {
         mcx_GetReturnCodeDescription(iResult, errorCode);
         printf("Error -> %s\n", errorCode);
         return;
     }
 
-    iResult = SendMessage_6_3(data);
+    iResult = SendMessage_6_3(data3);
     if (iResult < 0) {
         mcx_GetReturnCodeDescription(iResult, errorCode);
         printf("Error -> %s\n", errorCode);
         return;
     }
 
-    iResult = SendMessage_6_4(data);
+    iResult = SendMessage_6_4(data4);
     if (iResult < 0) {
         mcx_GetReturnCodeDescription(iResult, errorCode);
         printf("Error -> %s\n", errorCode);
@@ -242,27 +258,6 @@ void Process(const std::string dataString) {
             return;
         }
     }
-}
-
-INT16 GetMessagesResults() {
-    INT16 results = 0;
-    UINT16 blockStatus = 0;
-    UINT16 buffer[32];
-    UINT16 status1 = 0;
-    UINT16 status2 = 0;
-    UINT16 tTag = 0;
-
-    for (int i = 0; i < 3; i++) {
-        results = mcx_Get_Element_Results(DeviceId, BusList1, i, &blockStatus, buffer, 32, &status1, &status2, &tTag);
-        if (results < 0)
-            return results;
-        printf("BSW %X STS1 %X STS2 %X ", blockStatus, status1, status1);
-        for (int j = 0; j < 32; j++) {
-            printf("%4X ", buffer[j]);
-        }
-        printf("\n\n");
-    }
-    return results;
 }
 
 INT16 SendMessage_6_1(ICD_6_1_data data) {
@@ -298,5 +293,24 @@ INT16 SendMessage_6_4(ICD_6_4_data data) {
     std::cout << "Sending data: " << data.utctimetag << std::endl;
     prepare(data, buffer);
     results = mcx_Element_DataBlock_Write(DeviceId, ICD_6_1, DB1, buffer, 32);
+    return results;
+}
+
+INT16 GetMessagesResults() {
+    INT16 results = 0;
+    UINT16 blockStatus = 0;
+    UINT16 buffer[32];
+    UINT16 status1 = 0;
+    UINT16 status2 = 0;
+    UINT16 tTag = 0;
+
+    results = mcx_Get_Element_Results(DeviceId, BusList1, i, &blockStatus, buffer, 32, &status1, &status2, &tTag);
+    if (results < 0)
+        return results;
+    printf("BSW %X STS1 %X STS2 %X ", blockStatus, status1, status1);
+    for (int j = 0; j < 32; j++) {
+        printf("%4X ", buffer[j]);
+    }
+    printf("\n\n");
     return results;
 }

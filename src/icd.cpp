@@ -1,6 +1,6 @@
-#include "icd.h"
 #include <iostream>
 #include <cstdint>
+#include "icd.h"
 
 #pragma once
 
@@ -127,9 +127,12 @@ void prepare(ICD_6_4_data data, UINT16 buffer[32])
     buffer[7] = (temp >> 16) & 0xFFFF;
     buffer[8] = temp & 0xFFFF;
 
-    buffer[43] = static_cast<UINT16>(data.datesat);
-    buffer[44] = static_cast<UINT16>(data.timesat);
-    buffer[45] = static_cast<UINT16>(data.posdilutionofprecision);
-    buffer[46] = static_cast<UINT16>(data.gpsfom);
-    buffer[47] = static_cast<UINT16>(data.utctimetag);
+    buffer[9] = static_cast<UINT16>(data.satellitelatitude);
+
+    buffer[10] = (data.datesat[0] & 0x7F) | ((data.datesat[1] & 0x0F) << 7) | ((data.datesat[2] & 0x1F) << 11);
+    buffer[11] = (data.timesat[0] & 0x1F) | ((data.timesat[1] & 0x3F) << 5);
+    buffer[12] = data.timesat[2] & 0x3F;
+    buffer[13] = data.posdilutionofprecision;
+    buffer[14] = data.gpsfom;
+    buffer[15] = (data.utctimetag % 50) << 8 | ((data.utctimetag / 50) % 50) ;
 };

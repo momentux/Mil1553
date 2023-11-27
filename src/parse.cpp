@@ -1,8 +1,9 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-
 #include "icd.h"
+#include <iostream>
+
 
 bool parseDouble(const std::string& cell, double& value) {
     try {
@@ -10,9 +11,11 @@ bool parseDouble(const std::string& cell, double& value) {
         return true;
     } catch (const std::invalid_argument& e) {
         // Handle invalid argument exception
+        std::cerr << "Invalid argument: " << e.what() << std::endl;
         return false;
     } catch (const std::out_of_range& e) {
         // Handle out-of-range exception
+        std::cerr << "Out of range: " << e.what() << std::endl;
         return false;
     }
 }
@@ -23,9 +26,11 @@ bool parseInt(const std::string& cell, int& value) {
         return true;
     } catch (const std::invalid_argument& e) {
         // Handle invalid argument exception
+        std::cerr << "Invalid argument: " << e.what() << std::endl;
         return false;
     } catch (const std::out_of_range& e) {
         // Handle out-of-range exception
+        std::cerr << "Out of range: " << e.what() << std::endl;
         return false;
     }
 }
@@ -99,22 +104,22 @@ int ParseFGMessage(const std::string& dataString, ICD_6_1_data& data1, ICD_6_2_d
                 if (!parseDouble(cell, data3.presentgroundspeed)) return -1;
                 break;
             case 18:
-                if (!parseInt(cell, data3.datesat[0])) return -1;
+                if (!parseInt(cell, data4.datesat[0])) return -1;
                 break;
             case 19:
-                if (!parseInt(cell, data3.datesat[1])) return -1;
+                if (!parseInt(cell, data4.datesat[1])) return -1;
                 break;
             case 20:
-                if (!parseInt(cell, data3.datesat[2])) return -1;
+                if (!parseInt(cell, data4.datesat[2])) return -1;
                 break;
             case 21:
-                if (!parseInt(cell, data3.timesat[0])) return -1;
+                if (!parseInt(cell, data4.timesat[0])) return -1;
                 break;
             case 22:
-                if (!parseInt(cell, data3.timesat[1])) return -1;
+                if (!parseInt(cell, data4.timesat[1])) return -1;
                 break;
             case 23:
-                if (!parseInt(cell, data3.timesat[2])) return -1;
+                if (!parseInt(cell, data4.timesat[2])) return -1;
                 break;
             default:
                 break;
