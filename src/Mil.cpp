@@ -304,13 +304,16 @@ INT16 GetMessagesResults() {
     UINT16 status2 = 0;
     UINT16 tTag = 0;
 
-    results = mcx_Get_Element_Results(DeviceId, BusList1, i, &blockStatus, buffer, 32, &status1, &status2, &tTag);
-    if (results < 0)
-        return results;
-    printf("BSW %X STS1 %X STS2 %X ", blockStatus, status1, status1);
-    for (int j = 0; j < 32; j++) {
-        printf("%4X ", buffer[j]);
+    for (int i = 0; i < 4; i++){
+        results = mcx_Get_Element_Results(DeviceId, BusList1, i, &blockStatus, buffer, 32, &status1, &status2, &tTag);
+        if (results < 0)
+            return results;
+        printf("BSW %X STS1 %X STS2 %X ", blockStatus, status1, status1);
+        for (int j = 0; j < 32; j++)
+        {
+            printf("%4X ", buffer[j]);
+        }
+        printf("\n\n");
     }
-    printf("\n\n");
     return results;
 }
