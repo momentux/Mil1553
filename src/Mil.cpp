@@ -15,10 +15,13 @@
 #pragma comment(lib, "ws2_32.lib")  // Link with ws2_32.lib
 #pragma comment(lib, "McxAPI")
 
+// There are 4 messages which we need to write as per ICD, initializing element id for each 
 static UINT16 ICD_6_1 = 0;
 static UINT16 ICD_6_2 = 1;
 static UINT16 ICD_6_3 = 2;
 static UINT16 ICD_6_4 = 3;
+
+// There are 4 messages which we need to write as per ICD, initializing datablock id for each 
 static UINT16 DB1 = 0;
 static UINT16 DB2 = 1;
 static UINT16 DB3 = 2;
@@ -39,7 +42,7 @@ int main() {
 
     slen = sizeof(si_other);
 
-    // Initialize device
+    // Initialize MIL 1553 device
     deviceInitializationStatus = InitDevice();
     if (deviceInitializationStatus < 0) {
         mcx_GetReturnCodeDescription(deviceInitializationStatus, errorCode);
@@ -53,7 +56,7 @@ int main() {
         return 1;
     }
 
-    // Create a socket
+    // Create a socket to listen on UDP FG data
     if ((s = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
         std::cerr << "Could not create socket : " << WSAGetLastError() << std::endl;
         WSACleanup();
@@ -73,7 +76,7 @@ int main() {
         return 1;
     }
 
-    bool isFirstLine = true;  // Flag to identify the first line
+    bool isFirstLine = true;  // Flag to identify the first line, it include header and don't need parsing
 
     // Keep listening for data
     while (true) {
@@ -99,6 +102,7 @@ int main() {
                 isFirstLine = false;
             } else {
                 std::cout << "Processing data: " << dataString << std::endl;
+                // Here we will prepare the message and write to MIL
                 Process(dataString);
             }
         } else {
@@ -114,15 +118,14 @@ int main() {
     return 0;
 }
 
+// Initialize device 0
 INT16 InitDevice() {
     INT16 res = 0;
     UINT16 devicesDetected = 0;
     mcx_MapDevices(&devicesDetected);
-    for (UINT16 i = 0; i < devicesDetected; i++) {
-        res = mcx_Initialize(DeviceId, MIL_STD_1553);
-        if (res != STL_ERR_SUCCESS) {
-            break;
-        }
+    res = mcx_Initialize(DeviceId, MIL_STD_1553);
+    if (res != STL_ERR_SUCCESS) {
+        break;
     }
     res = CreateBusFrame();
     return res;
@@ -134,15 +137,16 @@ INT16 CreateBusFrame() {
     static UINT16 datablock32[64];
 
     UINT16 messageOptions = RT2RT_FORMAT;
-    UINT16 cmd1 = 0x3020;  // BC2RT6 32WC
-    UINT16 cmd2 = 0xA420; // RT202BC 32WC;
-    UINT16 cmd3 = 0xF020;  // RT11toRT30 32WC
-    UINT16 cmd4 = 0x5C20;  // RT11toRT30 32WC
+    UINT16 cmd1 = 0x3020;  // RT5toRT3 32WC source sa 16 destination sa 6
+    UINT16 cmd2 = 0xA420; // RT5toRT3 4WC source sa 20 destination sa 4
+    UINT16 cmd3 = 0xF020;  // RT5toRT3 32WC source sa 27 destination sa 9
+    UINT16 cmd4 = 0x5C20;  // RT11toRT30 16WC source sa 2 destination sa 21
 
-    unsigned short rxStt = 0x800;
+    unsigned short rxStt = 0x2E00;
     unsigned short txStt = 0;
 
-    iResult += mcx_EnableRts(DeviceId, 0);
+    // here do we need to enable specific RTS, if yes how to build the rts vector
+    iResult += mcx_EnableRts(DeviceId, 0xFFFFFFFF); // Enable all RTs, incremental data is injected
     if (iResult < 0)
         return iResult;
 
