@@ -1,3 +1,5 @@
+#include "Mil.h"
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -6,7 +8,6 @@
 #include <sstream>
 #include <string>
 
-#include "Mil.h"
 #include "McxAPI.h"
 #include "McxAPIReturnCodes.h"
 #include "icd.h"
@@ -15,17 +16,20 @@
 #pragma comment(lib, "ws2_32.lib")  // Link with ws2_32.lib
 #pragma comment(lib, "McxAPI")
 
-// There are 4 messages which we need to write as per ICD, initializing element id for each 
+// There are 4 messages which we need to write as per ICD, initializing element id for each
 static UINT16 ICD_6_1 = 0;
 static UINT16 ICD_6_2 = 1;
 static UINT16 ICD_6_3 = 2;
 static UINT16 ICD_6_4 = 3;
 
-// There are 4 messages which we need to write as per ICD, initializing datablock id for each 
+// There are 4 messages which we need to write as per ICD, initializing datablock id for each
 static UINT16 DB1 = 0;
 static UINT16 DB2 = 1;
 static UINT16 DB3 = 2;
 static UINT16 DB4 = 3;
+
+static UINT16 datablock32[64];
+
 
 UINT16 DeviceId = 0;
 char errorCode[1000];
@@ -34,21 +38,11 @@ INT16 deviceInitializationStatus = 0;
 
 int main() {
     WSADATA wsa;
-    SOCKET s;
-    struct sockaddr_in server, si_other;
-    int slen, recv_len;
+    SOCKET s, new_socket;
+    struct sockaddr_in server;
+    int recv_len;
     char buf[2048];  // Adjust buffer size as needed
     char clientAddr[INET_ADDRSTRLEN];
-
-    slen = sizeof(si_other);
-
-    // Initialize MIL 1553 device
-    deviceInitializationStatus = InitDevice();
-    if (deviceInitializationStatus < 0) {
-        mcx_GetReturnCodeDescription(deviceInitializationStatus, errorCode);
-        std::cerr << "Error -> " << errorCode << std::endl;
-        return -1;
-    }
 
     // Initialize Winsock
     if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
@@ -57,7 +51,7 @@ int main() {
     }
 
     // Create a socket to listen on UDP FG data
-    if ((s = socket(AF_INET, SOCK_DGRAM, 0)) == INVALID_SOCKET) {
+    if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
         std::cerr << "Could not create socket : " << WSAGetLastError() << std::endl;
         WSACleanup();
         return 1;
@@ -76,38 +70,57 @@ int main() {
         return 1;
     }
 
+    // Listen for incoming connections
+    listen(s, 3);
+
+    // Accept and incoming connection
+    std::cout << "Waiting for incoming connections..." << std::endl;
+    int c = sizeof(struct sockaddr_in);
+    new_socket = accept(s, (struct sockaddr *)&server, &c);
+    if (new_socket == INVALID_SOCKET) {
+        std::cerr << "accept failed with error code : " << WSAGetLastError() << std::endl;
+        closesocket(s);
+        WSACleanup();
+        return 1;
+    }
+    std::cout << "Connection accepted" << std::endl;
+
     bool isFirstLine = true;  // Flag to identify the first line, it include header and don't need parsing
 
     // Keep listening for data
     while (true) {
-        // Receive data
-        recv_len = recvfrom(s, buf, sizeof(buf) - 1, 0, (struct sockaddr *)&si_other, &slen);
-        if (recv_len == SOCKET_ERROR) {
-            std::cerr << "recvfrom() failed with error code : " << WSAGetLastError() << std::endl;
-            break;
+        std::cout << "Waiting for incoming connections..." << std::endl;
+        int c = sizeof(struct sockaddr_in);
+        client_socket = accept(s, (struct sockaddr *)&server, &c);
+        if (client_socket == INVALID_SOCKET) {
+            std::cerr << "Accept failed with error code: " << WSAGetLastError() << std::endl;
+            continue;
         }
+        std::cout << "Connection accepted" << std::endl;
 
-        buf[recv_len] = '\0';  // Null-terminate the received data
+        // Communicate with the client
+        while ((recv_len = recv(client_socket, buf, sizeof(buf), 0)) > 0) {
+            buf[recv_len] = '\0';  // Null-terminate the received data
 
-        // Convert to string and trim trailing spaces
-        std::string dataString(buf);
-        dataString.erase(std::find_if(dataString.rbegin(), dataString.rend(), [](unsigned char ch) { return !std::isspace(ch); })
-                             .base(),
-                         dataString.end());
+            // Convert to string and trim trailing spaces
+            std::string dataString(buf);
+            dataString.erase(std::find_if(dataString.rbegin(), dataString.rend(), [](unsigned char ch) { return !std::isspace(ch); })
+                                 .base(),
+                             dataString.end());
 
-        // Print details of the client/peer and the data received
-        if (InetNtopA(AF_INET, &si_other.sin_addr, clientAddr, INET_ADDRSTRLEN) != NULL) {
+            // Print details of the client/peer and the data received
             if (isFirstLine) {
-                std::cout << "Received packet from " << clientAddr << ":" << ntohs(si_other.sin_port) << std::endl;
                 isFirstLine = false;
             } else {
                 std::cout << "Processing data: " << dataString << std::endl;
                 // Here we will prepare the message and write to MIL
                 Process(dataString);
             }
-        } else {
-            std::cerr << "InetNtopA failed with error: " << WSAGetLastError() << std::endl;
         }
+        if (recv_len == SOCKET_ERROR) {
+            std::cerr << "recv failed with error code: " << WSAGetLastError() << std::endl;
+        }
+        closesocket(client_socket);  // Close the client socket and wait for another connection
     }
 
     // Cleanup
@@ -134,11 +147,10 @@ INT16 InitDevice() {
 INT16 CreateBusFrame() {
     INT16 iResult = 0;
 
-    static UINT16 datablock32[64];
 
     UINT16 messageOptions = RT2RT_FORMAT;
     UINT16 cmd1 = 0x3020;  // RT5toRT3 32WC source sa 16 destination sa 6
-    UINT16 cmd2 = 0xA420; // RT5toRT3 4WC source sa 20 destination sa 4
+    UINT16 cmd2 = 0xA420;  // RT5toRT3 4WC source sa 20 destination sa 4
     UINT16 cmd3 = 0xF020;  // RT5toRT3 32WC source sa 27 destination sa 9
     UINT16 cmd4 = 0x5C20;  // RT11toRT30 16WC source sa 2 destination sa 21
 
@@ -146,7 +158,7 @@ INT16 CreateBusFrame() {
     unsigned short txStt = 0;
 
     // here do we need to enable specific RTS, if yes how to build the rts vector
-    iResult += mcx_EnableRts(DeviceId, 0xFFFFFFFF); // Enable all RTs, incremental data is injected
+    iResult += mcx_EnableRts(DeviceId, 0xFFFFFFFF);  // Enable all RTs, incremental data is injected
     if (iResult < 0)
         return iResult;
 
@@ -308,13 +320,12 @@ INT16 GetMessagesResults() {
     UINT16 status2 = 0;
     UINT16 tTag = 0;
 
-    for (int i = 0; i < 4; i++){
+    for (int i = 0; i < 4; i++) {
         results = mcx_Get_Element_Results(DeviceId, BusList1, i, &blockStatus, buffer, 32, &status1, &status2, &tTag);
         if (results < 0)
             return results;
         printf("BSW %X STS1 %X STS2 %X ", blockStatus, status1, status1);
-        for (int j = 0; j < 32; j++)
-        {
+        for (int j = 0; j < 32; j++) {
             printf("%4X ", buffer[j]);
         }
         printf("\n\n");
