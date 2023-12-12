@@ -127,7 +127,7 @@ int ParseFGMessage(const std::string& dataString, ICD_6_1_data& data1, ICD_6_2_d
         fieldCount++;
     }
 
-    if (fieldCount < expectedFieldCount) {
+    if (fieldCount > 0 && fieldCount < expectedFieldCount ) {
         // Not enough values
         return -1;
     }

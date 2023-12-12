@@ -1,232 +1,203 @@
 #include "Mil.h"
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
-
-#include <algorithm>
-#include <iostream>
-#include <sstream>
-#include <string>
-
-#include "McxAPI.h"
-#include "McxAPIReturnCodes.h"
-#include "icd.h"
+#include "DeviceInterface.h"
+#include "ltypes.h"
 #include "parse.h"
+#include "stdafx.h"
 
 #pragma comment(lib, "ws2_32.lib")  // Link with ws2_32.lib
 #pragma comment(lib, "McxAPI")
 
-// There are 4 messages which we need to write as per ICD, initializing element id for each
-static UINT16 ICD_6_1 = 0;
-static UINT16 ICD_6_2 = 1;
-static UINT16 ICD_6_3 = 2;
-static UINT16 ICD_6_4 = 3;
+#define PORT 8888
+#define UINT16 DeviceId 0
+#define UINT16 BusList1 0
+#define INT RT_NO = 0x20;  // rt 5 -> 2^5//
 
-// There are 4 messages which we need to write as per ICD, initializing datablock id for each
-static UINT16 DB1 = 0;
-static UINT16 DB2 = 1;
-static UINT16 DB3 = 2;
-static UINT16 DB4 = 3;
+#define UINT16 ICD_6_1 0
+#define UINT16 ICD_6_2 1
+#define UINT16 ICD_6_3 2
+#define UINT16 ICD_6_4 3
 
-static UINT16 datablock32[64];
-
-
-UINT16 DeviceId = 0;
 char errorCode[1000];
-static UINT16 BusList1 = 0;
-INT16 deviceInitializationStatus = 0;
+static UINT16 buffer_6_1[64];
+static UINT16 buffer_6_2[64];
+static UINT16 buffer_6_3[64];
+static UINT16 buffer_6_4[64];
+
+// cmd createion RT<<11|Tx/Rx<<10|SA<<5|WC
+// UINT16 cmd1 = 0x2E00; // 5-T-16-32
+// UINT16 cmd1r = 0x18C0;// 3-R-6-32
+
+UINT16 cmd_6_1_tx = 0x2E1F;  // 5-T-16-32
+UINT16 cmd_6_1_rx = 0x1DF0;  // 3-R-6-32
+
+UINT16 cmd_6_2_tx = 0x2E83;  // 5-T-20-4
+UINT16 cmd_6_2_rx = 0x1883;  // 3-R-4-4
+
+UINT16 cmd_6_3_tx = 0x2F7F;  // 5-T-27-32
+UINT16 cmd_6_3_rx = 0x193F;  // 3-R-9-32
+
+UINT16 cmd_6_4_tx = 0x2C4F;  // 5-T-2-16
+UINT16 cmd_6_4_rx = 0x199F;  // 3-R-21-16
 
 int main() {
-    WSADATA wsa;
-    SOCKET s, new_socket;
-    struct sockaddr_in server;
-    int recv_len;
-    char buf[2048];  // Adjust buffer size as needed
-    char clientAddr[INET_ADDRSTRLEN];
+    Byte buffer[512];
+    Int32 size;
+    Int32 cnt;
 
-    // Initialize Winsock
-    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-        std::cerr << "Failed. Error Code : " << WSAGetLastError() << std::endl;
-        return 1;
-    }
+    UDPLanInterface sockObj(0, PORT, (Byte *)"127.0.0.1", RX_MODE);
 
-    // Create a socket to listen on UDP FG data
-    if ((s = socket(AF_INET, SOCK_STREAM, 0)) == INVALID_SOCKET) {
-        std::cerr << "Could not create socket : " << WSAGetLastError() << std::endl;
-        WSACleanup();
-        return 1;
-    }
+    // Initialize MIL 1553B device
+    InitDevice();
 
-    // Prepare the sockaddr_in structure
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(8888);
-
-    // Bind
-    if (bind(s, (struct sockaddr *)&server, sizeof(server)) == SOCKET_ERROR) {
-        std::cerr << "Bind failed with error code : " << WSAGetLastError() << std::endl;
-        closesocket(s);
-        WSACleanup();
-        return 1;
-    }
-
-    // Listen for incoming connections
-    listen(s, 3);
-
-    // Accept and incoming connection
-    std::cout << "Waiting for incoming connections..." << std::endl;
-    int c = sizeof(struct sockaddr_in);
-    new_socket = accept(s, (struct sockaddr *)&server, &c);
-    if (new_socket == INVALID_SOCKET) {
-        std::cerr << "accept failed with error code : " << WSAGetLastError() << std::endl;
-        closesocket(s);
-        WSACleanup();
-        return 1;
-    }
-    std::cout << "Connection accepted" << std::endl;
-
-    bool isFirstLine = true;  // Flag to identify the first line, it include header and don't need parsing
-
-    // Keep listening for data
-    while (true) {
-        std::cout << "Waiting for incoming connections..." << std::endl;
-        int c = sizeof(struct sockaddr_in);
-        client_socket = accept(s, (struct sockaddr *)&server, &c);
-        if (client_socket == INVALID_SOCKET) {
-            std::cerr << "Accept failed with error code: " << WSAGetLastError() << std::endl;
-            continue;
+    while (1) {
+        if ((cnt = sockObj.RecvPack(buffer, &size)) > 0) {
+            buffer[cnt] = '\0';
+            std::string dataString(buffer);
+            rtrim(dataString);
+            std::cout << "Processing data: " << dataString << std::endl;
+            Process(dataString);
         }
-        std::cout << "Connection accepted" << std::endl;
-
-        // Communicate with the client
-        while ((recv_len = recv(client_socket, buf, sizeof(buf), 0)) > 0) {
-            buf[recv_len] = '\0';  // Null-terminate the received data
-
-            // Convert to string and trim trailing spaces
-            std::string dataString(buf);
-            dataString.erase(std::find_if(dataString.rbegin(), dataString.rend(), [](unsigned char ch) { return !std::isspace(ch); })
-                                 .base(),
-                             dataString.end());
-
-            // Print details of the client/peer and the data received
-            if (isFirstLine) {
-                isFirstLine = false;
-            } else {
-                std::cout << "Processing data: " << dataString << std::endl;
-                // Here we will prepare the message and write to MIL
-                Process(dataString);
-            }
-        }
-        if (recv_len == SOCKET_ERROR) {
-            std::cerr << "recv failed with error code: " << WSAGetLastError() << std::endl;
-        }
-        closesocket(client_socket);  // Close the client socket and wait for another connection
     }
 
-    // Cleanup
     mcx_Free(DeviceId);
-    closesocket(s);
-    WSACleanup();
-
     return 0;
 }
 
-// Initialize device 0
+// trim from end (in place)
+static inline void rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+                         [](unsigned char ch) { return !std::isspace(ch); })
+                .base(),
+            s.end());
+}
+
 INT16 InitDevice() {
     INT16 res = 0;
     UINT16 devicesDetected = 0;
     mcx_MapDevices(&devicesDetected);
+
+    // initialize the deviceID 0
     res = mcx_Initialize(DeviceId, MIL_STD_1553);
     if (res != STL_ERR_SUCCESS) {
-        break;
+        printf("Error Initializing Device\n");
+        return res;
     }
+
+    // map port, not sure if this is really needed
+    res = mcx_SetUserPort(DeviceId, MIL_STD_1553 | MultiRT);
+    if (res < 0) {
+        mcx_GetReturnCodeDescription(res, errorCode);
+        printf("Error -> %s\n", errorCode);
+        return -1;
+    }
+
     res = CreateBusFrame();
+
+    if (res < 0) {
+        std::cerr << "Error Creating Frame/ Element/ DB \n" << std::endl;
+        mcx_GetReturnCodeDescription(res, errorCode);
+        std::cerr << "Error -> " << errorCode << std::endl;
+        return -1;
+    }
+
     return res;
 }
 
 INT16 CreateBusFrame() {
     INT16 iResult = 0;
+    unsigned short rxStt = 0x1820;
+    unsigned short txStt = 0x2E00;
 
+    UINT16 stat = 0;
+    UINT32 RtList = 0;
 
-    UINT16 messageOptions = RT2RT_FORMAT;
-    UINT16 cmd1 = 0x3020;  // RT5toRT3 32WC source sa 16 destination sa 6
-    UINT16 cmd2 = 0xA420;  // RT5toRT3 4WC source sa 20 destination sa 4
-    UINT16 cmd3 = 0xF020;  // RT5toRT3 32WC source sa 27 destination sa 9
-    UINT16 cmd4 = 0x5C20;  // RT11toRT30 16WC source sa 2 destination sa 21
+    UINT16 blockStatus = 0;
+    iResult += mcx_EnableRts(DeviceId, nRtNo);
+    if (iResult < 0) return iResult;
 
-    unsigned short rxStt = 0x2E00;
-    unsigned short txStt = 0;
-
-    // here do we need to enable specific RTS, if yes how to build the rts vector
-    iResult += mcx_EnableRts(DeviceId, 0xFFFFFFFF);  // Enable all RTs, incremental data is injected
-    if (iResult < 0)
-        return iResult;
+    mcx_Get_EnabledRts(DeviceId, &RtList);
 
     for (UINT16 i = 0x0000; i < 32; i++) {
-        datablock32[i] = i + 30;
-    }
-
-    if (iResult < 0)
-        return iResult;
+        buffer_6_1[i] = 0xFFFF;
+        buffer_6_2[i] = 0xFFFF;
+        buffer_6_3[i] = 0xFFFF;
+        buffer_6_4[i] = 0xFFFF;
+        datablock_6_5[i] = 0xFFFF;
+    };
     iResult = mcx_Create_BusList(DeviceId, BusList1);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_1, cmd1, 0x80 /*Bus A*/ | messageOptions, 0x0000, rxStt, txStt);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_2, cmd2, 0x80 /*Bus A*/ | messageOptions, 0x0000, rxStt, txStt);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_3, cmd3, 0x80 /*Bus A*/ | messageOptions, 0x0000, rxStt, txStt);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_4, cmd4, 0x80 /*Bus A*/ | messageOptions, 0x0000, rxStt, txStt);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Create_Element_DataBlock(DeviceId, DB1, 0, datablock32, 64);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Create_Element_DataBlock(DeviceId, DB2, 0, datablock32, 64);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Create_Element_DataBlock(DeviceId, DB3, 0, datablock32, 64);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Create_Element_DataBlock(DeviceId, DB4, 0, datablock32, 64);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_1, DB1);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_2, DB2);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_3, DB3);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_4, DB4);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_1);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_2);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_3);
-    if (iResult < 0)
-        return iResult;
-    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_4);
-    if (iResult < 0)
-        return iResult;
+    if (iResult < 0) return iResult;
 
-    iResult = mcx_Start(DeviceId, BusList1, 1);
-    if (iResult < 0)
-        return iResult;
+    // only for RT-RT
+    iResult = mcx_Create_BusList_Element(DeviceId, ICD_6_1, cmd_6_1_tx,
+                                         0x80 | RT2RT_FORMAT, cmd_6_1_rx, rxStt,
+                                         txStt);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Create_BusList_Element(
+        DeviceId, ICD_6_2, cmd_6_2_tx, 0x80 | RT2RT_FORMAT, cmd_6_2_rx, rxStt,
+        txStt);  ///*Bus A*/ , 0x0000, rxStt, txStt);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Create_BusList_Element(
+        DeviceId, ICD_6_3, cmd_6_3_tx, 0x80 | RT2RT_FORMAT, cmd_6_3_rx, rxStt,
+        txStt);  ///*Bus A*/, 0x0000, rxStt, txStt);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Create_BusList_Element(
+        DeviceId, ICD_6_4, cmd_6_4_tx, 0x80 | RT2RT_FORMAT, cmd_6_4_rx, rxStt,
+        txStt);  ///*Bus A*/, 0x0000, rxStt, txStt);
+    if (iResult < 0) return iResult;
+
+    // For RT to BC
+    // iResult = mcx_Create_BusList_Element1(DeviceId, ICD_6_5, cmd13, 0x80
+    // /*Bus B*/);
+
+    //////////////////////////////////////////////////////////////////////////
+    // To create element data block
+    iResult =
+        mcx_Create_Element_DataBlock(DeviceId, ICD_6_1, 0, buffer_6_1, 64);
+    if (iResult < 0) return iResult;
+    iResult =
+        mcx_Create_Element_DataBlock(DeviceId, ICD_6_2, 0, buffer_6_2, 64);
+    if (iResult < 0) return iResult;
+    iResult =
+        mcx_Create_Element_DataBlock(DeviceId, ICD_6_3, 0, buffer_6_3, 64);
+    if (iResult < 0) return iResult;
+    iResult =
+        mcx_Create_Element_DataBlock(DeviceId, ICD_6_4, 0, buffer_6_4, 64);
+    if (iResult < 0) return iResult;
+
+    /////////////////////////////////////////////////////////////////////////////
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Mapping the created data block to element
+    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_1, ICD_6_1);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_2, ICD_6_2);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_3, ICD_6_3);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Map_DataBlock_To_Element(DeviceId, ICD_6_4, ICD_6_4);
+    if (iResult < 0) return iResult;
+
+    /////////////////////////////////////////////////////////////////////////////
+
+    // Mapping element to bus list
+    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_1);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_2);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_3);
+    if (iResult < 0) return iResult;
+    iResult = mcx_Map_Element_To_BusList(DeviceId, BusList1, ICD_6_4);
+    if (iResult < 0) return iResult;
+
+    // to add new
+    ////////////////////////////////////////////////////////////////////////////////
+
+    iResult = mcx_Start(DeviceId, BusList1, 0);
+    if (iResult < 0) return iResult;
 
     // Waiting for the frame to end
-    Sleep(1);
-    return iResult;
+    // Sleep(20);
 }
 
 void Process(const std::string dataString) {
@@ -244,6 +215,7 @@ void Process(const std::string dataString) {
         printf("Error -> %s\n", errorCode);
         return;
     }
+    Sleep(2);
 
     iResult = SendMessage_6_2(data2);
     if (iResult < 0) {
@@ -251,6 +223,7 @@ void Process(const std::string dataString) {
         printf("Error -> %s\n", errorCode);
         return;
     }
+    Sleep(2);
 
     iResult = SendMessage_6_3(data3);
     if (iResult < 0) {
@@ -258,6 +231,7 @@ void Process(const std::string dataString) {
         printf("Error -> %s\n", errorCode);
         return;
     }
+    Sleep(2);
 
     iResult = SendMessage_6_4(data4);
     if (iResult < 0) {
@@ -265,50 +239,37 @@ void Process(const std::string dataString) {
         printf("Error -> %s\n", errorCode);
         return;
     }
-
-    for (int i = 0; i < 4; i++) {
-        iResult = GetMessagesResults();
-        if (iResult < 0) {
-            mcx_GetReturnCodeDescription(iResult, errorCode);
-            printf("Error -> %s\n", errorCode);
-            return;
-        }
-    }
+    Sleep(2);
 }
 
 INT16 SendMessage_6_1(ICD_6_1_data data) {
     INT16 results = 0;
-    UINT16 buffer[32];
     std::cout << "Sending data: " << data.velocitytimetag << std::endl;
-    prepare(data, buffer);
-    results = mcx_Element_DataBlock_Write(DeviceId, ICD_6_1, DB1, buffer, 32);
+    prepare(data, buffer_6_1);
+    // result = mcx_Element_DataBlock_Write(DeviceId, ICD_6_2, ICD_6_2,
+    // buff_I21, 32);
+    results = mcx_Element_UpdateData(DeviceId, BusList1, ICD_6_1);
     return results;
 }
 
 INT16 SendMessage_6_2(ICD_6_2_data data) {
     INT16 results = 0;
-    UINT16 buffer[32];
-    std::cout << "Sending data: " << data.loop << std::endl;
-    prepare(data, buffer);
-    results = mcx_Element_DataBlock_Write(DeviceId, ICD_6_1, DB1, buffer, 32);
+    prepare(data, buffer_6_2);
+    results = mcx_Element_UpdateData(DeviceId, BusList1, ICD_6_2);
     return results;
 }
 
 INT16 SendMessage_6_3(ICD_6_3_data data) {
     INT16 results = 0;
-    UINT16 buffer[32];
-    std::cout << "Sending data: " << data.strmode << std::endl;
-    prepare(data, buffer);
-    results = mcx_Element_DataBlock_Write(DeviceId, ICD_6_1, DB1, buffer, 32);
+    prepare(data, buffer_6_3);
+    results = mcx_Element_UpdateData(DeviceId, BusList1, ICD_6_3);
     return results;
 }
 
 INT16 SendMessage_6_4(ICD_6_4_data data) {
     INT16 results = 0;
-    UINT16 buffer[32];
-    std::cout << "Sending data: " << data.utctimetag << std::endl;
-    prepare(data, buffer);
-    results = mcx_Element_DataBlock_Write(DeviceId, ICD_6_1, DB1, buffer, 32);
+    prepare(data, buffer_6_4);
+    results = mcx_Element_UpdateData(DeviceId, BusList1, ICD_6_4);
     return results;
 }
 
@@ -321,9 +282,10 @@ INT16 GetMessagesResults() {
     UINT16 tTag = 0;
 
     for (int i = 0; i < 4; i++) {
-        results = mcx_Get_Element_Results(DeviceId, BusList1, i, &blockStatus, buffer, 32, &status1, &status2, &tTag);
-        if (results < 0)
-            return results;
+        results =
+            mcx_Get_Element_Results(DeviceId, BusList1, i, &blockStatus, buffer,
+                                    32, &status1, &status2, &tTag);
+        if (results < 0) return results;
         printf("BSW %X STS1 %X STS2 %X ", blockStatus, status1, status1);
         for (int j = 0; j < 32; j++) {
             printf("%4X ", buffer[j]);

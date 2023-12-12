@@ -22,6 +22,7 @@
     <ClCompile Include="src\icd.cpp" />
     <ClCompile Include="src\Mil.cpp" />
     <ClCompile Include="src\parse.cpp" />
+    <ClCompile Include="UDPLanInterface.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -91,7 +92,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>C:\Momentux\Mil\Lib\32</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);C:\Momentux\Mil\Lib\32\McxAPI.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);C:\Momentux\Mil\Lib\32\McxAPI.lib;</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
