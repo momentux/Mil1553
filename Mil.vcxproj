@@ -22,7 +22,15 @@
     <ClCompile Include="src\icd.cpp" />
     <ClCompile Include="src\Mil.cpp" />
     <ClCompile Include="src\parse.cpp" />
-    <ClCompile Include="UDPLanInterface.cpp" />
+    <ClCompile Include="src\stdafx.cpp" />
+    <ClCompile Include="src\UDPLanInterface.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="include\DeviceInterface.h" />
+    <ClInclude Include="include\icd.h" />
+    <ClInclude Include="include\ltypes.h" />
+    <ClInclude Include="include\Mil.h" />
+    <ClInclude Include="include\parse.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
