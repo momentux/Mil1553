@@ -1,11 +1,11 @@
 #ifndef MIL_H
 #define MIL_H
 
-#include <iostream>
-#include <string>
 #include "McxAPI.h"
 #include "McxAPIReturnCodes.h"
 #include "icd.h"
+#include <iostream>
+#include <string>
 
 // Function declarations
 INT16 InitDevice();

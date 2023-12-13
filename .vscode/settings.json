@@ -4,5 +4,6 @@
         "string": "cpp"
     },
     "editor.wordWrapColumn": 160,
-    "editor.wordWrap": "wordWrapColumn"
+    "editor.wordWrap": "wordWrapColumn",
+    "C_Cpp.clang_format_style": "{ BasedOnStyle: LLVM, ColumnLimit: 120 }"
 }
