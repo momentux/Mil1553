@@ -250,7 +250,7 @@ int main() {
 
     UDPLanInterface sockObj(0, PORT, (Byte*)"127.0.0.1", RX_MODE);
     // Initialize device
-    // InitDevice();
+    InitDevice();
 
     while (1) {
         if ((cnt = sockObj.RecvPack(buffer, &size)) > 0) {

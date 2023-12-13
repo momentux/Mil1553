@@ -4,7 +4,7 @@
 struct ICD_6_1_data
 {
     UINT16 imumodeword1 = 0;
-    double velocitytimetag = 2;
+    double velocitytimetag;
     double northvelocity;    // velocities/v-north-fps
     double eastvelocity;     // velocities/v-east-fps
     double downvelocity;     // velocities/v-down-fps
