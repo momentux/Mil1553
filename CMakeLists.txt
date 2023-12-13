@@ -137,13 +137,13 @@ endif()
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     target_include_directories(${PROJECT_NAME} PUBLIC
         "$<$<CONFIG:Debug>:"
-            "${CMAKE_CURRENT_SOURCE_DIR}/../Mil/include"
+            "${CMAKE_CURRENT_SOURCE_DIR}/include"
         ">"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86")
     target_include_directories(${PROJECT_NAME} PUBLIC
         "$<$<CONFIG:Debug>:"
-            "${CMAKE_CURRENT_SOURCE_DIR}/../Mil/include"
+            "${CMAKE_CURRENT_SOURCE_DIR}/include"
         ">"
     )
 endif()
@@ -235,7 +235,6 @@ if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86")
     set(ADDITIONAL_LIBRARY_DEPENDENCIES
         "$<$<CONFIG:Debug>:"
             "$(CoreLibraryDependencies);"
-            "C:/Momentux/Mil3/Lib/32/McxAPI.lib;"
             "ws2_32.lib"
         ">"
     )
@@ -245,13 +244,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE "${ADDITIONAL_LIBRARY_DEPENDENCIES
 if("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x64")
     target_link_directories(${PROJECT_NAME} PRIVATE
         "$<$<CONFIG:Debug>:"
-            "C:/Momentux/Mil/Lib/32/"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Lib/64"
         ">"
     )
 elseif("${CMAKE_VS_PLATFORM_NAME}" STREQUAL "x86")
     target_link_directories(${PROJECT_NAME} PRIVATE
         "$<$<CONFIG:Debug>:"
-            "C:/Momentux/Mil/Lib/32"
+            "${CMAKE_CURRENT_SOURCE_DIR}/Lib/32"
         ">"
     )
 endif()
