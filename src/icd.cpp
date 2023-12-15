@@ -1,28 +1,27 @@
-#include <iostream>
-#include <cstdint>
 #include "icd.h"
+
+#include <cstdint>
+#include <iostream>
 
 #pragma once
 
 const double fpsTomps = 0.3048;
 const double fpsTokts = 0.592484;
 const double radToDeg = 57.2957795131;
-const double lsb1 = 0.064;             // velocity time tag
-const double lsb2 = 0.00000116272;  // 1.16272 * e^-6
-const double lsb3 = 0.005493;    // 5.493 * e^-3
-const double lsb4 = 0.009525;      // 9.525 * e^-3
-const double lsb5 = 0.000000000931;     // 9.31 * e^-10
-const double lsb6 = 1.2192;            // present alt
-const double lsb7 = 0.0054932;    // gcerror 5.4932 * e^-3
-const double lsb8 = 0.000000083819; // plat,plong 8.3819 * e^-8
-const double lsb9 = 0.0219727;    // roll,pitch,yaw 2.19727 * e^-2
-const double lsb10 = 0.0625;           //  wind velocity
-const double lsb11 = 0.03125;          // sat speed
-const double lsb12 = 2;          // sat lat long
+const double lsb1 = 0.064;           // velocity time tag
+const double lsb2 = 0.00000116272;   // 1.16272 * e^-6
+const double lsb3 = 0.005493;        // 5.493 * e^-3
+const double lsb4 = 0.009525;        // 9.525 * e^-3
+const double lsb5 = 0.000000000931;  // 9.31 * e^-10
+const double lsb6 = 1.2192;          // present alt
+const double lsb7 = 0.0054932;       // gcerror 5.4932 * e^-3
+const double lsb8 = 0.000000083819;  // plat,plong 8.3819 * e^-8
+const double lsb9 = 0.0219727;       // roll,pitch,yaw 2.19727 * e^-2
+const double lsb10 = 0.0625;         //  wind velocity
+const double lsb11 = 0.03125;        // sat speed
+const double lsb12 = 2;              // sat lat long
 
-
-void prepare(ICD_6_1_data data, UINT16 buffer[32])
-{
+void prepare(ICD_6_1_data data, UINT16 buffer[32]) {
     std::fill_n(buffer, 32, 0);
     UINT32 temp;
 
@@ -30,7 +29,7 @@ void prepare(ICD_6_1_data data, UINT16 buffer[32])
     buffer[1] = static_cast<UINT16>(data.velocitytimetag / lsb1);
 
     temp = static_cast<UINT32>(data.northvelocity * fpsTomps / lsb2);
-    buffer[2] = (temp >> 16) & 0xFFFF; // Upper 16 bits
+    buffer[2] = (temp >> 16) & 0xFFFF;  // Upper 16 bits
     buffer[3] = temp & 0xFFFF;
 
     temp = static_cast<UINT32>(data.eastvelocity * fpsTomps / lsb2);
@@ -73,8 +72,7 @@ void prepare(ICD_6_1_data data, UINT16 buffer[32])
     buffer[31] = static_cast<UINT16>(data.yawrate * radToDeg / lsb9);
 };
 
-void prepare(ICD_6_2_data data, UINT16 buffer[32])
-{
+void prepare(ICD_6_2_data data, UINT16 buffer[32]) {
     std::fill_n(buffer, 32, 0);
 
     buffer[0] = data.inustatus;
@@ -83,8 +81,7 @@ void prepare(ICD_6_2_data data, UINT16 buffer[32])
     buffer[3] = data.srufailureindicators;
 };
 
-void prepare(ICD_6_3_data data, UINT16 buffer[32])
-{
+void prepare(ICD_6_3_data data, UINT16 buffer[32]) {
     std::fill_n(buffer, 32, 0);
     UINT32 temp;
 
@@ -107,8 +104,7 @@ void prepare(ICD_6_3_data data, UINT16 buffer[32])
     buffer[23] = data.verticalpositionfom;
 };
 
-void prepare(ICD_6_4_data data, UINT16 buffer[32])
-{
+void prepare(ICD_6_4_data data, UINT16 buffer[32]) {
     std::fill_n(buffer, 32, 0);
     UINT32 temp;
 
@@ -134,5 +130,5 @@ void prepare(ICD_6_4_data data, UINT16 buffer[32])
     buffer[12] = data.timesat[2] & 0x3F;
     buffer[13] = data.posdilutionofprecision;
     buffer[14] = data.gpsfom;
-    buffer[15] = (data.utctimetag % 50) << 8 | ((data.utctimetag / 50) % 50) ;
+    buffer[15] = (data.utctimetag % 50) << 8 | ((data.utctimetag / 50) % 50);
 };

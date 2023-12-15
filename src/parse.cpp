@@ -1,9 +1,9 @@
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include "icd.h"
-#include <iostream>
 
+#include "icd.h"
 
 bool parseDouble(const std::string& cell, double& value) {
     try {
@@ -127,7 +127,7 @@ int ParseFGMessage(const std::string& dataString, ICD_6_1_data& data1, ICD_6_2_d
         fieldCount++;
     }
 
-    if (fieldCount > 0 && fieldCount < expectedFieldCount ) {
+    if (fieldCount > 0 && fieldCount < expectedFieldCount) {
         // Not enough values
         return -1;
     }
